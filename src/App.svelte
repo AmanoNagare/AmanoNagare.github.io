@@ -120,7 +120,7 @@
     color: #1a1a1a;
     border: none;
     border-radius: 2px;
-    padding: 90px 120px;
+    padding: 25px 40px;
     width: 100%;
     height: auto;
     max-height: 94vh;
@@ -140,7 +140,7 @@
   }
 
   .paper-title {
-    font-size: 128px; 
+    font-size: 64px; 
     font-weight: 600;
     margin-top: 0;
     margin-bottom: 60px;
@@ -151,7 +151,7 @@
   }
 
   .paper-body-content :global(p) {
-    font-size: 64px; 
+    font-size: 32px; 
     line-height: 1.8;
     margin-bottom: 48px;
     text-align: justify;
@@ -159,7 +159,7 @@
   }
 
   .paper-body-content :global(h3) {
-    font-size: 96px; 
+    font-size: 48px; 
     margin-top: 80px;
     margin-bottom: 32px;
     color: #111111;
@@ -172,7 +172,7 @@
   }
 
   .paper-body-content :global(li) {
-    font-size: 64px;
+    font-size: 32px;
     margin-bottom: 24px;
     line-height: 1.7;
   }
@@ -198,7 +198,7 @@
     background-color: #f3f0e7;
     padding: 4px 12px;
     border-radius: 4px;
-    font-size: 48px;
+    font-size: 24px;
   }
 
   .paper-position-mover {
