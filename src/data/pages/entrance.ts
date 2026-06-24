@@ -484,12 +484,13 @@ Amano Nagareの、Homepageへ...！！
 ## ようこそ。 
 `,
   leftLinks: [
-    { id: "0002-test" },
-    { id: "ta" },
-    { id: "0003-test" }
+      {id: "002"},
+      {id: "003"},
+      {id: "004"}
   ],
   rightLinks: [
-    { id: "0004-test" },
-    { id: "0005-test" }
+      {id: "005"},
+      {id: "006"},
+      {id: "007"}
   ]
 } as BlogPage;

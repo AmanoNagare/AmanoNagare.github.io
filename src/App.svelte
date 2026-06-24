@@ -4,11 +4,17 @@
 
   const marked = new Marked();
 
-  // 【修正】初期起動時のIDを、実際のファイル名「0001-entrance」にぴったり一致させました
+  // 初期起動時のページID
   let currentId = $state("entrance");
   
   let currentPage = $derived(blogNetwork[currentId]);
-  let renderedContent = $derived(marked.parse(currentPage?.content ?? "") as string);
+  
+  // 文字の入っていない完全な空行を自動的に特大余白のパーツに置換
+  let renderedContent = $derived(
+    currentPage?.content 
+      ? (marked.parse(currentPage.content.replace(/^\s*$/gm, '<div class="cosmic-line-gap"></div>')) as string)
+      : ""
+  );
 
   function navigateTo(id: string) {
     currentId = id;
@@ -16,7 +22,6 @@
 </script>
 
 <main class="cosmos-container">
-  <!-- 左カラム -->
   <section class="side-column">
     <div class="safe-cosmic-zone">
       {#key currentId}
@@ -35,26 +40,26 @@
     </div>
   </section>
 
-  <!-- 中央カラム -->
   <section class="center-content">
-    {#if currentPage}
-      <article class="main-paper-sheet">
-        <h1 class="paper-title">{currentPage.title}</h1>
-        <div class="paper-body-content">
-          {@html renderedContent}
-        </div>
-      </article>
-    {:else}
-      <article class="main-paper-sheet">
-        <h1 class="paper-title">404</h1>
-        <div class="paper-body-content">
-          <p>言葉の断片が見つかりませんでした。別の紙を手繰り寄せてください。</p>
-        </div>
-      </article>
-    {/if}
+    {#key currentId}
+      {#if currentPage}
+        <article class="main-paper-sheet">
+          <h1 class="paper-title">{currentPage.title}</h1>
+          <div class="paper-body-content">
+            {@html renderedContent}
+          </div>
+        </article>
+      {:else}
+        <article class="main-paper-sheet">
+          <h1 class="paper-title">404</h1>
+          <div class="paper-body-content">
+            <p>言葉の断片が見つかりませんでした。別の紙を手繰り寄せてください。</p>
+          </div>
+        </article>
+      {/if}
+    {/key}
   </section>
 
-  <!-- 右カラム -->
   <section class="side-column">
     <div class="safe-cosmic-zone">
       {#key currentId}
@@ -80,7 +85,7 @@
     top: 0;
     left: 0;
     display: grid;
-    grid-template-columns: 1fr 85vw 1fr;
+    grid-template-columns: 1fr 68vw 1fr;
     width: 100vw;
     height: 100vh;
     background-color: #090d16;
@@ -120,7 +125,7 @@
     color: #1a1a1a;
     border: none;
     border-radius: 2px;
-    padding: 25px 40px;
+    padding: 50px 70px;
     width: 100%;
     height: auto;
     max-height: 94vh;
@@ -140,47 +145,49 @@
   }
 
   .paper-title {
-    font-size: 64px; 
+    font-size: 38px; 
     font-weight: 600;
     margin-top: 0;
-    margin-bottom: 60px;
+    margin-bottom: 40px;
     color: #000000;
     border-bottom: 4px solid #e2dfd5;
-    padding-bottom: 24px;
-    line-height: 1.2;
+    padding-bottom: 20px;
+    line-height: 1.3;
   }
 
   .paper-body-content :global(p) {
-    font-size: 32px; 
-    line-height: 1.8;
-    margin-bottom: 48px;
+    font-size: 18px; 
+    line-height: 1.9;
+    margin-bottom: 32px;
     text-align: justify;
     letter-spacing: 0.03em;
+    white-space: pre-wrap; 
   }
 
   .paper-body-content :global(h3) {
-    font-size: 48px; 
-    margin-top: 80px;
-    margin-bottom: 32px;
+    font-size: 24px; 
+    margin-top: 48px;
+    margin-bottom: 20px;
     color: #111111;
     font-weight: 600;
   }
 
   .paper-body-content :global(ul) {
-    padding-left: 64px;
-    margin-bottom: 48px;
+    padding-left: 32px;
+    margin-bottom: 32px;
   }
 
   .paper-body-content :global(li) {
-    font-size: 32px;
-    margin-bottom: 24px;
+    font-size: 18px;
+    margin-bottom: 12px;
     line-height: 1.7;
+    white-space: pre-wrap;
   }
 
   .paper-body-content :global(blockquote) {
-    margin: 60px 0;
-    padding-left: 32px;
-    border-left: 10px solid #d3cfc2;
+    margin: 40px 0;
+    padding-left: 24px;
+    border-left: 8px solid #d3cfc2;
     color: #444444;
     font-style: italic;
   }
@@ -189,16 +196,24 @@
     width: 100%;
     height: auto;
     border-radius: 2px;
-    margin: 60px 0;
+    margin: 40px 0;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   }
 
   .paper-body-content :global(code) {
     font-family: monospace;
     background-color: #f3f0e7;
-    padding: 4px 12px;
+    padding: 4px 8px;
     border-radius: 4px;
-    font-size: 24px;
+    font-size: 15px;
+  }
+
+  /* 空行1行につき、画面の高さの 6% 分（6vh）の巨大な虚空を自動マウント */
+  .paper-body-content :global(.cosmic-line-gap) {
+    display: block;
+    height: 6vh; 
+    width: 100%;
+    content: "";
   }
 
   .paper-position-mover {
