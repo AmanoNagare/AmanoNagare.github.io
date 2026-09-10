@@ -105,9 +105,11 @@ async function main(){
     let d = new SimpleDate(2026, 9, 1);
     let t = today();
     let promise_vec = [];
-    for(let i=0;i<=t.to_int() - d.to_int();i++){
+    let n = t.to_int() - d.to_int();
+    for(let i=0;i<=n;i++){
         promise_vec.push(append_and_fetch_journal(journal_list_elem, d.clone()));
         d.next();
+        console.log(d);
     }
     await Promise.all(promise_vec);
     sortJournalLinks(journal_list_elem);
