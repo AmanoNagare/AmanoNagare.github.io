@@ -1,8 +1,12 @@
-marked.setOptions({breaks: true});
+declare const marked: any;
+marked.use({breaks: true});
 
 let journal_list_elem = document.getElementById("journal-list");
 class SimpleDate{
-    constructor(y, m, d){
+    public y: number
+    public m: number
+    public d: number
+    constructor(y: number, m: number, d: number){
         this.y = y;
         this.m = m;
         this.d = d;
@@ -41,10 +45,10 @@ class SimpleDate{
         }
         return 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) + Math.floor(306 * (m + 1) / 10) + this.d - 428;
     }
-    _valid(y, m, d){
+    _valid(y: number, m: number, d: number){
         return 1 <= d && d <= this._last_day(y, m);
     }
-    _last_day(y, m){
+    _last_day(y: number, m: number){
         if([1, 3, 5, 7, 8, 10, 12].includes(m))return 31;
         if(m == 2){
             if((y % 4 == 0 && y % 100 != 0) || y % 400 == 0)return 29;
@@ -54,7 +58,7 @@ class SimpleDate{
     }
 }
 
-function get_last_day(y, m){
+function get_last_day(y: number, m: number){
     if([1, 3, 5, 7, 8, 10, 12].includes(m))return 31;
     if(m == 2){
         if((y % 4 == 0 && y % 100 != 0) || y % 400 == 0)return 29;
@@ -63,7 +67,7 @@ function get_last_day(y, m){
     return 30;
 }
 
-function appendJournal(parent_elem, date){
+function appendJournal(parent_elem: HTMLElement, date: SimpleDate){
     let a_elem = document.createElement('a');
     const mm = String(date.m).padStart(2, '0');
     const dd = String(date.d).padStart(2, '0');
@@ -75,8 +79,8 @@ function appendJournal(parent_elem, date){
     parent_elem.appendChild(a_elem);
 }
 
-function sortJournalLinks(parent_elem){
-    const items = Array.from(parent_elem.children);
+function sortJournalLinks(parent_elem: HTMLElement){
+    const items = Array.from(parent_elem.querySelectorAll<HTMLAnchorElement>(":scope > a"));
     items.sort((a, b) => b.href.localeCompare(a.href));
     items.forEach(item => parent_elem.appendChild(item));
 }
@@ -86,7 +90,7 @@ function today(){
     return new SimpleDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
 }
 
-async function append_and_fetch_journal(parent_elem, date){
+async function append_and_fetch_journal(parent_elem: HTMLElement, date: SimpleDate){
     const mm = String(date.m).padStart(2, '0');
     const dd = String(date.d).padStart(2, '0');
     const yy = String(date.y % 100).padStart(2, '0');
@@ -106,6 +110,7 @@ async function main(){
     let t = today();
     let promise_vec = [];
     let n = t.to_int() - d.to_int();
+    if(!journal_list_elem)throw new Error("Element jounal-list not found");
     for(let i=0;i<=n;i++){
         promise_vec.push(append_and_fetch_journal(journal_list_elem, d.clone()));
         d.next();

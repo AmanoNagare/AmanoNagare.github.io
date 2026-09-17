@@ -1,3 +1,1189 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+coming_soon/
+  index.html
+journal/
+  data/
+    2026-09-09.md
+    2026-09-10.md
+    2026-09-11.md
+    2026-09-12.md
+    2026-09-13.md
+    2026-09-14.md
+    2026-09-15.md
+  index.html
+  main.js
+src/
+  ts/
+    journal.ts
+.gitignore
+aggregated.css
+index.html
+package.json
+styles.css
+tsconfig.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/ts/journal.ts">
+declare const marked: any;
+marked.use({breaks: true});
+
+let journal_list_elem = document.getElementById("journal-list");
+class SimpleDate{
+    public y: number
+    public m: number
+    public d: number
+    constructor(y: number, m: number, d: number){
+        this.y = y;
+        this.m = m;
+        this.d = d;
+    }
+    next(){
+        this.d++;
+        if(!this._valid(this.y, this.m, this.d)){
+            this.m++;
+            this.d = 1;
+            if(this.m > 12){
+                this.y++;
+                this.m = 1;
+            }
+        }
+    }
+    prev(){
+        this.d--;
+        if(this.d < 1){
+            this.m--;
+            this.d = this._last_day(this.y, this.m);
+            if(this.m < 1){
+                this.y--;
+                this.m = 12;
+            }
+        }
+    }
+    clone(){
+        return new SimpleDate(this.y, this.m, this.d);
+    }
+    to_int(){
+        let y = this.y;
+        let m = this.m;
+        if(m <= 2){
+            y -= 1;
+            m += 12;
+        }
+        return 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) + Math.floor(306 * (m + 1) / 10) + this.d - 428;
+    }
+    _valid(y: number, m: number, d: number){
+        return 1 <= d && d <= this._last_day(y, m);
+    }
+    _last_day(y: number, m: number){
+        if([1, 3, 5, 7, 8, 10, 12].includes(m))return 31;
+        if(m == 2){
+            if((y % 4 == 0 && y % 100 != 0) || y % 400 == 0)return 29;
+            return 28
+        }
+        return 30;
+    }
+}
+
+function get_last_day(y: number, m: number){
+    if([1, 3, 5, 7, 8, 10, 12].includes(m))return 31;
+    if(m == 2){
+        if((y % 4 == 0 && y % 100 != 0) || y % 400 == 0)return 29;
+        return 28
+    }
+    return 30;
+}
+
+function appendJournal(parent_elem: HTMLElement, date: SimpleDate){
+    let a_elem = document.createElement('a');
+    const mm = String(date.m).padStart(2, '0');
+    const dd = String(date.d).padStart(2, '0');
+    const yy = String(date.y % 100).padStart(2, '0');
+    a_elem.href = `data/${date.y}-${mm}-${dd}.md`;
+    a_elem.textContent = `Amano Nagare 日誌エントリ${yy}${mm}${dd}`;
+    a_elem.className = "block text-[#1a2075] hover:underline hover:text-[#ded103] font-bold";
+    console.log(a_elem);
+    parent_elem.appendChild(a_elem);
+}
+
+function sortJournalLinks(parent_elem: HTMLElement){
+    const items = Array.from(parent_elem.querySelectorAll<HTMLAnchorElement>(":scope > a"));
+    items.sort((a, b) => b.href.localeCompare(a.href));
+    items.forEach(item => parent_elem.appendChild(item));
+}
+
+function today(){
+    let d = new Date();
+    return new SimpleDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+
+async function append_and_fetch_journal(parent_elem: HTMLElement, date: SimpleDate){
+    const mm = String(date.m).padStart(2, '0');
+    const dd = String(date.d).padStart(2, '0');
+    const yy = String(date.y % 100).padStart(2, '0');
+    const url = `data/${date.y}-${mm}-${dd}.md`;
+    let res = await fetch(url);
+    if(res.ok){
+        let a_elem = document.createElement('a');
+        a_elem.href = url;
+        a_elem.textContent = `Amano Nagare 日誌エントリ${yy}${mm}${dd}`;
+        a_elem.className = "block text-[#1a2075] hover:underline hover:text-[#ded103] font-bold";
+        parent_elem.appendChild(a_elem);
+    }
+}
+
+async function main(){  
+    let d = new SimpleDate(2026, 9, 1);
+    let t = today();
+    let promise_vec = [];
+    let n = t.to_int() - d.to_int();
+    if(!journal_list_elem)throw new Error("Element jounal-list not found");
+    for(let i=0;i<=n;i++){
+        promise_vec.push(append_and_fetch_journal(journal_list_elem, d.clone()));
+        d.next();
+        console.log(d);
+    }
+    await Promise.all(promise_vec);
+    sortJournalLinks(journal_list_elem);
+}
+
+main();
+</file>
+
+<file path=".gitignore">
+/node_modules
+</file>
+
+<file path="aggregated.css">
+/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */
+@layer properties;
+@layer theme, base, components, utilities;
+@layer theme {
+  :root, :host {
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+      "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+      "Segoe UI Symbol", "Noto Color Emoji";
+    --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+      "Courier New", monospace;
+    --color-amber-200: oklch(92.4% 0.12 95.746);
+    --color-pink-50: oklch(97.1% 0.014 343.198);
+    --color-gray-200: oklch(92.8% 0.006 264.531);
+    --color-neutral-200: oklch(92.2% 0 none);
+    --color-neutral-600: oklch(43.9% 0 none);
+    --color-neutral-800: oklch(26.9% 0 none);
+    --color-black: #000;
+    --color-white: #fff;
+    --spacing: 0.25rem;
+    --container-3xl: 48rem;
+    --text-lg: 1.125rem;
+    --text-lg--line-height: calc(1.75 / 1.125);
+    --text-xl: 1.25rem;
+    --text-xl--line-height: calc(1.75 / 1.25);
+    --text-4xl: 2.25rem;
+    --text-4xl--line-height: calc(2.5 / 2.25);
+    --text-6xl: 3.75rem;
+    --text-6xl--line-height: 1;
+    --text-7xl: 4.5rem;
+    --text-7xl--line-height: 1;
+    --text-8xl: 6rem;
+    --text-8xl--line-height: 1;
+    --font-weight-bold: 700;
+    --leading-relaxed: 1.625;
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
+    --default-transition-duration: 150ms;
+    --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    --default-font-family: var(--font-sans);
+    --default-mono-font-family: var(--font-mono);
+  }
+}
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+  }
+  html, :host {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+    font-family: var(--default-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");
+    font-feature-settings: var(--default-font-feature-settings, normal);
+    font-variation-settings: var(--default-font-variation-settings, normal);
+    -webkit-tap-highlight-color: transparent;
+  }
+  hr {
+    height: 0;
+    color: inherit;
+    border-top-width: 1px;
+  }
+  abbr:where([title]) {
+    -webkit-text-decoration: underline dotted;
+    text-decoration: underline dotted;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  a {
+    color: inherit;
+    -webkit-text-decoration: inherit;
+    text-decoration: inherit;
+  }
+  b, strong {
+    font-weight: bolder;
+  }
+  code, kbd, samp, pre {
+    font-family: var(--default-mono-font-family, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+    font-feature-settings: var(--default-mono-font-feature-settings, normal);
+    font-variation-settings: var(--default-mono-font-variation-settings, normal);
+    font-size: 1em;
+  }
+  small {
+    font-size: 80%;
+  }
+  sub, sup {
+    font-size: 75%;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+  }
+  sub {
+    bottom: -0.25em;
+  }
+  sup {
+    top: -0.5em;
+  }
+  table {
+    text-indent: 0;
+    border-color: inherit;
+    border-collapse: collapse;
+  }
+  :-moz-focusring:where(:not(iframe)) {
+    outline: auto;
+  }
+  progress {
+    vertical-align: baseline;
+  }
+  summary {
+    display: list-item;
+  }
+  ol, ul, menu {
+    list-style: none;
+  }
+  img, svg, video, canvas, audio, iframe, embed, object {
+    display: block;
+    vertical-align: middle;
+  }
+  img, video {
+    max-width: 100%;
+    height: auto;
+  }
+  button, input, select, optgroup, textarea, ::file-selector-button {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    border-radius: 0;
+    background-color: transparent;
+    opacity: 1;
+  }
+  :where(select:is([multiple], [size])) optgroup {
+    font-weight: bolder;
+  }
+  :where(select:is([multiple], [size])) optgroup option {
+    padding-inline-start: 20px;
+  }
+  ::file-selector-button {
+    margin-inline-end: 4px;
+  }
+  ::placeholder {
+    opacity: 1;
+  }
+  @supports (not (-webkit-appearance: -apple-pay-button))  or (contain-intrinsic-size: 1px) {
+    ::placeholder {
+      color: currentcolor;
+      @supports (color: color-mix(in lab, red, red)) {
+        color: color-mix(in oklab, currentcolor 50%, transparent);
+      }
+    }
+  }
+  textarea {
+    resize: vertical;
+  }
+  ::-webkit-search-decoration {
+    -webkit-appearance: none;
+  }
+  ::-webkit-date-and-time-value {
+    min-height: 1lh;
+    text-align: inherit;
+  }
+  ::-webkit-datetime-edit {
+    display: inline-flex;
+  }
+  ::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+  }
+  ::-webkit-datetime-edit, ::-webkit-datetime-edit-year-field, ::-webkit-datetime-edit-month-field, ::-webkit-datetime-edit-day-field, ::-webkit-datetime-edit-hour-field, ::-webkit-datetime-edit-minute-field, ::-webkit-datetime-edit-second-field, ::-webkit-datetime-edit-millisecond-field, ::-webkit-datetime-edit-meridiem-field {
+    padding-block: 0;
+  }
+  ::-webkit-calendar-picker-indicator {
+    line-height: 1;
+  }
+  :-moz-ui-invalid {
+    box-shadow: none;
+  }
+  button, input:where([type="button"], [type="reset"], [type="submit"]), ::file-selector-button {
+    appearance: button;
+  }
+  ::-webkit-inner-spin-button, ::-webkit-outer-spin-button {
+    height: auto;
+  }
+  [hidden]:where(:not([hidden="until-found"])) {
+    display: none !important;
+  }
+}
+@layer utilities {
+  .sticky {
+    position: sticky;
+  }
+  .top-0 {
+    top: 0px;
+  }
+  .z-50 {
+    z-index: 50;
+  }
+  .col-start-1 {
+    grid-column-start: 1;
+  }
+  .row-start-1 {
+    grid-row-start: 1;
+  }
+  .mx-auto {
+    margin-inline: auto;
+  }
+  .mt-2 {
+    margin-top: calc(var(--spacing) * 2);
+  }
+  .mt-10 {
+    margin-top: calc(var(--spacing) * 10);
+  }
+  .block {
+    display: block;
+  }
+  .flex {
+    display: flex;
+  }
+  .grid {
+    display: grid;
+  }
+  .inline-flex {
+    display: inline-flex;
+  }
+  .inline-grid {
+    display: inline-grid;
+  }
+  .h-32 {
+    height: calc(var(--spacing) * 32);
+  }
+  .min-h-screen {
+    min-height: 100vh;
+  }
+  .w-32 {
+    width: calc(var(--spacing) * 32);
+  }
+  .max-w-3xl {
+    max-width: var(--container-3xl);
+  }
+  .grid-cols-1 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+  .grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid-rows-1 {
+    grid-template-rows: repeat(1, minmax(0, 1fr));
+  }
+  .flex-wrap {
+    flex-wrap: wrap;
+  }
+  .items-baseline {
+    align-items: baseline;
+  }
+  .items-center {
+    align-items: center;
+  }
+  .justify-center {
+    justify-content: center;
+  }
+  .gap-3 {
+    gap: calc(var(--spacing) * 3);
+  }
+  .gap-4 {
+    gap: calc(var(--spacing) * 4);
+  }
+  .gap-10 {
+    gap: calc(var(--spacing) * 10);
+  }
+  :where(.space-y-1 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(var(--spacing) * var(--tw-space-y-reverse));
+    margin-block-end: calc(var(--spacing) * calc(1 - var(--tw-space-y-reverse)));
+  }
+  :where(.space-y-2 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 2) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-y-reverse)));
+  }
+  :where(.space-y-8 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 8) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 8) * calc(1 - var(--tw-space-y-reverse)));
+  }
+  .rounded-2xl {
+    border-radius: var(--radius-2xl);
+  }
+  .rounded-xl {
+    border-radius: var(--radius-xl);
+  }
+  .border {
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+  }
+  .border-b {
+    border-bottom-style: var(--tw-border-style);
+    border-bottom-width: 1px;
+  }
+  .border-amber-200\/30 {
+    border-color: color-mix(in srgb, oklch(92.4% 0.12 95.746) 30%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-amber-200) 30%, transparent);
+    }
+  }
+  .border-gray-200\/30 {
+    border-color: color-mix(in srgb, oklch(92.8% 0.006 264.531) 30%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-gray-200) 30%, transparent);
+    }
+  }
+  .border-neutral-200 {
+    border-color: var(--color-neutral-200);
+  }
+  .bg-gray-200 {
+    background-color: var(--color-gray-200);
+  }
+  .bg-pink-50 {
+    background-color: var(--color-pink-50);
+  }
+  .bg-white {
+    background-color: var(--color-white);
+  }
+  .bg-gradient-to-b {
+    --tw-gradient-position: to bottom in oklab;
+    background-image: linear-gradient(var(--tw-gradient-stops));
+  }
+  .from-\[\#0a1245\] {
+    --tw-gradient-from: #0a1245;
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
+  .from-\[\#111111\] {
+    --tw-gradient-from: #111111;
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
+  .to-\[\#1a2075\] {
+    --tw-gradient-to: #1a2075;
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
+  .to-\[\#444444\] {
+    --tw-gradient-to: #444444;
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
+  .fill-current {
+    fill: currentcolor;
+  }
+  .p-4 {
+    padding: calc(var(--spacing) * 4);
+  }
+  .p-6 {
+    padding: calc(var(--spacing) * 6);
+  }
+  .px-4 {
+    padding-inline: calc(var(--spacing) * 4);
+  }
+  .px-8 {
+    padding-inline: calc(var(--spacing) * 8);
+  }
+  .py-4 {
+    padding-block: calc(var(--spacing) * 4);
+  }
+  .py-8 {
+    padding-block: calc(var(--spacing) * 8);
+  }
+  .font-\[\'Noto_Serif_JP\'\] {
+    font-family: 'Noto Serif JP';
+  }
+  .font-\[\'Pinyon_Script\'\] {
+    font-family: 'Pinyon Script';
+  }
+  .font-serif {
+    font-family: var(--font-serif);
+  }
+  .text-4xl {
+    font-size: var(--text-4xl);
+    line-height: var(--tw-leading, var(--text-4xl--line-height));
+  }
+  .text-6xl {
+    font-size: var(--text-6xl);
+    line-height: var(--tw-leading, var(--text-6xl--line-height));
+  }
+  .text-7xl {
+    font-size: var(--text-7xl);
+    line-height: var(--tw-leading, var(--text-7xl--line-height));
+  }
+  .text-8xl {
+    font-size: var(--text-8xl);
+    line-height: var(--tw-leading, var(--text-8xl--line-height));
+  }
+  .text-lg {
+    font-size: var(--text-lg);
+    line-height: var(--tw-leading, var(--text-lg--line-height));
+  }
+  .text-xl {
+    font-size: var(--text-xl);
+    line-height: var(--tw-leading, var(--text-xl--line-height));
+  }
+  .leading-relaxed {
+    --tw-leading: var(--leading-relaxed);
+    line-height: var(--leading-relaxed);
+  }
+  .font-bold {
+    --tw-font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-bold);
+  }
+  .whitespace-nowrap {
+    white-space: nowrap;
+  }
+  .text-\[\#1a2075\] {
+    color: #1a2075;
+  }
+  .text-\[\#aaaaaa\] {
+    color: #aaaaaa;
+  }
+  .text-\[\#ded103\] {
+    color: #ded103;
+  }
+  .text-neutral-600 {
+    color: var(--color-neutral-600);
+  }
+  .text-neutral-800 {
+    color: var(--color-neutral-800);
+  }
+  .opacity-0 {
+    opacity: 0%;
+  }
+  .opacity-100 {
+    opacity: 100%;
+  }
+  .shadow-md {
+    --tw-shadow: 0 4px 6px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 2px 4px -2px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .transition-colors {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+  @media (hover: hover) {
+    .group-hover\:opacity-0:is(:where(.group):hover *) {
+      opacity: 0%;
+    }
+    .group-hover\:opacity-100:is(:where(.group):hover *) {
+      opacity: 100%;
+    }
+    .hover\:text-\[\#1DA1F2\]:hover {
+      color: #1DA1F2;
+    }
+    .hover\:text-\[\#5865F2\]:hover {
+      color: #5865F2;
+    }
+    .hover\:text-\[\#008000\]:hover {
+      color: #008000;
+    }
+    .hover\:text-\[\#FF0000\]:hover {
+      color: #FF0000;
+    }
+    .hover\:text-\[\#ded103\]:hover {
+      color: #ded103;
+    }
+    .hover\:text-black:hover {
+      color: var(--color-black);
+    }
+    .hover\:underline:hover {
+      text-decoration-line: underline;
+    }
+  }
+}
+@property --tw-space-y-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+@property --tw-border-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
+@property --tw-gradient-position {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-gradient-from {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #0000;
+}
+@property --tw-gradient-via {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #0000;
+}
+@property --tw-gradient-to {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #0000;
+}
+@property --tw-gradient-stops {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-gradient-via-stops {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-gradient-from-position {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+@property --tw-gradient-via-position {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+@property --tw-gradient-to-position {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-leading {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-font-weight {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-inset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-inset-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-inset-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-ring-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-inset-ring-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-inset-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-ring-inset {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-ring-offset-width {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --tw-ring-offset-color {
+  syntax: "*";
+  inherits: false;
+  initial-value: #fff;
+}
+@property --tw-ring-offset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@layer properties {
+  @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
+    *, ::before, ::after, ::backdrop {
+      --tw-space-y-reverse: 0;
+      --tw-border-style: solid;
+      --tw-gradient-position: initial;
+      --tw-gradient-from: #0000;
+      --tw-gradient-via: #0000;
+      --tw-gradient-to: #0000;
+      --tw-gradient-stops: initial;
+      --tw-gradient-via-stops: initial;
+      --tw-gradient-from-position: 0%;
+      --tw-gradient-via-position: 50%;
+      --tw-gradient-to-position: 100%;
+      --tw-leading: initial;
+      --tw-font-weight: initial;
+      --tw-shadow: 0 0 #0000;
+      --tw-shadow-color: initial;
+      --tw-shadow-alpha: 100%;
+      --tw-inset-shadow: 0 0 #0000;
+      --tw-inset-shadow-color: initial;
+      --tw-inset-shadow-alpha: 100%;
+      --tw-ring-color: initial;
+      --tw-ring-shadow: 0 0 #0000;
+      --tw-inset-ring-color: initial;
+      --tw-inset-ring-shadow: 0 0 #0000;
+      --tw-ring-inset: initial;
+      --tw-ring-offset-width: 0px;
+      --tw-ring-offset-color: #fff;
+      --tw-ring-offset-shadow: 0 0 #0000;
+    }
+  }
+}
+</file>
+
+<file path="package.json">
+{
+  "name": "page",
+  "version": "1.0.0",
+  "main": "index.js",
+"scripts": {
+  "build:css": "tailwindcss -i ./src/input.css -o ./dist/output.css",
+  "build:ts": "tsc",
+  "build": "npm run build:css && npm run build:ts",
+  "watch:css": "tailwindcss -i ./styles.css -o ./aggregated.css --watch",
+  "watch:ts": "tsc --watch"
+},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.3.3"
+  }
+}
+</file>
+
+<file path="styles.css">
+@import "tailwindcss";
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "rootDir": "src/ts",
+    "outDir": "./build/js",
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "checkJs": false,
+    "types": [],
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Style Options
+    // "noImplicitReturns": true,
+    // "noImplicitOverride": true,
+    // "noUnusedLocals": true,
+    // "noUnusedParameters": true,
+    // "noFallthroughCasesInSwitch": true,
+    // "noPropertyAccessFromIndexSignature": true,
+
+    // Recommended Options
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "removeComments": true,
+  },
+  "include": ["src/**/*"]
+}
+</file>
+
+<file path="coming_soon/index.html">
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Amano Nagareの発生は、現在確認されていません。">
+        <title>Amano Nagareの発生は、現在確認されていません。</title>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <link rel="stylesheet" href="/aggregated.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    </head>
+    <body class="bg-gray-200 min-h-screen">
+        <header class="bg-gradient-to-b from-[#111111] to-[#444444] font-serif text-[#aaaaaa] text-4xl px-8 py-8 whitespace-nowrap sticky top-0 z-50 border-b border-gray-200/30">
+            <h1 class="flex items-baseline gap-3">
+                <span class="font-['Pinyon_Script'] text-6xl">
+                    Comming Soon
+                </span>
+            </h1>
+        </header>
+        <main class="mt-10 max-w-3xl mx-auto px-4 py-4 bg-white rounded-2xl shadow-md p-6 text-neutral-800 font-['Noto_Serif_JP'] text-lg space-y-8">
+            <p class="text-4xl py-8">Amano Nagareの発生は、現在確認されていません。</p>
+            発生が確認され次第、内容を更新致します。これからもよろしくお願いします。
+            <a href="../" class="group inline-grid grid-cols-1 grid-rows-1 text-[#1a2075] hover:underline hover:text-[#ded103]">
+                <span class="col-start-1 row-start-1 opacity-100 group-hover:opacity-0">トップに戻る</span>
+                <span class="col-start-1 row-start-1 opacity-0 group-hover:opacity-100">ここにいるよ</span>
+            </a>
+        </main>
+    </body>
+    <script src="main.js"></script>
+</html>
+</file>
+
+<file path="journal/data/2026-09-09.md">
+### 10:19
+私は、つい先程、起きました。私は朝食としてトーストを選び、それを焼きました。その後、私はABC321のバーチャルコンテストに参加します。それが今日の朝のルーチンでした。
+
+### 12:05
+私はバーチャルコンテストが終わりました。私のパフォーマンスは本番で言うところの1045でした。それは緑であり、私が目標とすべき水色に255届きませんでした。私が水色になるためには、E問題を解く、または30分早くD問題を解く必要がありました。今回は、B問題を解くのに10分、C問題を解くのに50分近くかけていたため、C問題を解くのにかなりの時間を要しました。C問題は、あまり数の性質に十分に着目しない、非常に不気味な解き方をしたので、私は頭を必要以上に回しました。私は解説に感嘆する。それは非常に良い性質を持っていたので、私はこのスタイルを踏襲しなければなりません。さもなければ、私は緑から逃れられないでしょう...。恐ろしい！
+
+### 13:57
+私は今、担々麺のカップラーメンを食べています。私と'/4#ezさんは、仕事に対する力入れ具合をテーマにした対話をしました。'/4#ezさんは、何に対してもフルパワーを費やせないのとは対象的に、私は一つのことにフルパワーを費やしてしまう特性があります(少なくとも、私はそう認識しています)。しかし、私は一つのことにフルパワーを費やすあまり、それ以外の物事に対してパワーを入れません。ゆえに、全ての私がフルパワーを費やしている物事を認識していない対象は、私が怠惰に見えてしまいます。私は社会に本格的に参画する前に、少なくとも支障のない水準までこの特性を改善しなければなりません...。しかし、残念ながら、私の認識している如何なる方針も、確信を持ってそれを改善するとは言えないのが現状です。その問題の性質上、それは自明かもしれませんが...。
+
+### 16:52
+ついに、スマートフォンでリモートリポジトリ上の日誌にプッシュが可能なアプリケーションが完成しました。AIを使ったのにもかかわらず、1週間もかかったのは、私の能力不足によるものだと考えます。たしかに1週間でスマートフォンのアプリをある程度完成させたのは早いのかもしれませんが、その理論が通用するのは5年も遅いです。今の時代では1日単位で大規模モジュールを作り、残りの6日間を検証するほうがはるかに品質が良くなると感じます、知らないですけど。私は反省すべき点が多々あると感じたので、これを私のブログに統合次第、開発の感想を書こうと思います。正直まだ機能は物足りないところがありますが、それでも現時点で十分に利便性に足るものなので、一旦は保留します。
+
+### 17:21
+Zv4l<Qが眠ってしまったので、私はその間VcU8tQと時間を潰そうと思います、私はなんだかやる気がでないので、私は待つことしかできません...。
+
+### 22:34
+さて、私は私のホームページを作成します。何回か継続しようとしてできなかったn回目(nは任意の自然数)のホームページですが、今回は成功しますか？
+</file>
+
+<file path="journal/data/2026-09-11.md">
+### 07:37
+私はおはようございます、私は今日はおにぎりと味噌汁を作ります。私はおにぎりと味噌汁をさっさと食べて私は大学に向かおうと思います。
+
+### 09:01
+9時になったので、私は外出しました。今日は雨が降っているらしいです 傘を持って出かけましょう 雨が降っているらしいです 傘を持って出かけましょう
+
+### 11:01
+私は大学に到着致しました、バーチャルコンテストをするには時間が足りなく、かといえ待機するにしては時間があまりにも長いので、ウェブサイトを改良しようと考えています。
+
+### 12:23
+私は写真をいっぱい貼りました！私はカレーと味噌汁を摂食しています...！
+
+### 14:48
+結構忙しくなってしまいました、40台のPCにStable Diffusion Webui Forgeを入れなければならないため、とりあえずまずはそれを動かせるかどうかのチェックをしていますが、あんまりうまくいってはいません
+
+### 18:30
+ようやっと終わりました！結局のところ、インストールスクリプトを2つ作る形になりました、正直気持ちが悪いですがどうしようもないのでこれで通します...
+</file>
+
+<file path="journal/data/2026-09-14.md">
+### 08:11
+おはようございます、私が一日です。
+
+### 00:09
+疲れていてぐったりした一日でした、とほほ
+</file>
+
+<file path="journal/data/2026-09-15.md">
+### 06:07
+おはようございます、今日です...
+
+### 06:38
+ご飯と味噌汁だけの朝食を食べました！埼京線が止まったみたいですが動いたみたいなので結果オーライ？それにしても連日雨でつらいです、梅雨2nd season???
+</file>
+
+<file path="journal/data/2026-09-10.md">
+### 09:35
+おはようございます、それは私です？？
+
+### 10:48
+私は朝食にトーストを食べました！私はグレープフルーツジュースを飲みました。AtCoder Beginner Contest 258のバーチャルコンテストを行います!私はそれが楽しみです
+
+### 00:55
+はい、夢中になりすぎてしまってこんな時間になってしまいました、明日は予定があるので起きれるようにしたいです。私の静的ウェブサイトが完成しました！おめでとうございます！ありがとうございますそれではしかしスマートフォンのUIが悪いのでそれは改善されなければなりません。私は行きます！おやすみなさい。
+</file>
+
+<file path="journal/data/2026-09-13.md">
+### 07:04
+結局のところ、昨日のABCはかなり珍しく2完で終わってしまいました...。
+
+とりあえず、今は電車に乗っているのですが、やることは昨日のように同じですね。
+今日はGitHubで私用の設定があるのでそれを忘れないでおきたい(本当は昨日や一昨日からできたはずでした。)うーん...
+
+電車の中で昨日のABCを解きます...！
+
+### 19:47
+ひとまず終わりました、こまめに書きたかったは書きたかったのですがやはり書いている暇はないのと、シンプルに忘れていたりでまあいろいろまとめて書くことになりますよね〜、とりあえず私は無事です、生き延びました！まさか生きて帰れるとは思いませんでしたが、しかし興味深いことに、準備と後片付けは楽しかったですが他のブースに行ったり屋台を見に行ったりするのは楽しくなかったです。あまり客として行動するのが向いていないのかもしれません？楽しむ方法が分からないことが多くてうまく達成することができませんでした、それはそうと後片付けが特に楽しくて、人に命令されたことをやり遂げると感謝してもらえ、私としてもやはり達成感があるので、私はそういった楽しみ方の方が上手いのかもしれません？
+
+そういえば、前日は呼び込み、今日はビラ配りをしたのですが、どうしてもビラ配りが苦手でうまく配り切ることが困難でした。おそらく私が「向かう」のは、私自身でコントロールができるので楽なのかもしれませんが、相手が「来る」ところにビラを配るのは、相手の座標やシチュエーションをポーリングしなければならないため、毎回瞬間的な認知処理をしなければならない状況にリソースを持っていかれて言葉が浮かばない、のような状況を獲得しました。
+
+個人的には、これが私の「空気を読む」ことが苦手な特性と関係しているのかもしれません。一見類似したシチュエーションですが、前者が「私が特定の行動を実行する」→「相手の状況を認知する」→「認知した情報を処理し、次の行動を決定する」→「私が行動する」...のループであったのに対して、ビラ配りでは「サブルーチン「「相手の状況を認知する」→「特定の状態であるかどうかを確認する」→「相手の状況を認知する」→...」のループ中で、特定の状態になる」→「状態に合わせた行動を検索する」→「検索した行動を実行する」という非常に負荷のかかることをしているので、私にとってはかなり苦慮を強いられる形となりました?それでもめげずにタスクを実行できる人は地頭がとてもいいのだなと、凄く感心しています...！
+
+霽れの日も、褻の日も、名知らぬ囀りの聞こゆる辻を過ぎて背中を丸めて帰る寂しさが、今日の秋めく風を犇々と強く感じさせますね...
+帰り道は黄昏の下でいつも独りで歩きます
+今日は誰かと帰りたかった気もしないでもないですが疲れてたのでそうでもないのかもしれません
+
+帰ったらすぐにパスタを食べてねました
+</file>
+
+<file path="journal/index.html">
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Amano Nagareの日誌です。">
+        <title>Amano Nagare の日誌ですよ～</title>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <link rel="stylesheet" href="/aggregated.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    </head>
+    <body class="bg-pink-50 min-h-screen">
+        <header class="bg-gradient-to-b from-[#0a1245] to-[#1a2075] font-serif text-[#ded103] text-4xl px-8 py-8 whitespace-nowrap sticky top-0 z-50 border-b border-amber-200/30">
+            <h1 class="flex items-baseline gap-3">
+                <span class="font-['Pinyon_Script'] text-6xl">
+                    Amano Nagare
+                </span>
+                <span class="font-['Noto_Serif_JP']">
+                    の 日誌です～？！
+                </span>
+            </h1>
+        </header>
+        <main class="mt-10 max-w-3xl mx-auto px-4 py-4 bg-white rounded-2xl shadow-md p-6 text-neutral-800 font-['Noto_Serif_JP'] space-y-2">
+            <div id="journal-list" class="space-y-1"></div>
+            <p><a href="../" class="text-[#1a2075] hover:underline hover:text-[#ded103] text-lg">トップに戻る</a></p>
+        </main>
+    </body>
+    <script type="module" src="/build/js/journal.js"></script>
+</html>
+</file>
+
+<file path="journal/main.js">
+marked.setOptions({breaks: true});
+
+let journal_list_elem = document.getElementById("journal-list");
+class SimpleDate{
+    constructor(y, m, d){
+        this.y = y;
+        this.m = m;
+        this.d = d;
+    }
+    next(){
+        this.d++;
+        if(!this._valid(this.y, this.m, this.d)){
+            this.m++;
+            this.d = 1;
+            if(this.m > 12){
+                this.y++;
+                this.m = 1;
+            }
+        }
+    }
+    prev(){
+        this.d--;
+        if(this.d < 1){
+            this.m--;
+            this.d = this._last_day(this.y, this.m);
+            if(this.m < 1){
+                this.y--;
+                this.m = 12;
+            }
+        }
+    }
+    clone(){
+        return new SimpleDate(this.y, this.m, this.d);
+    }
+    to_int(){
+        let y = this.y;
+        let m = this.m;
+        if(m <= 2){
+            y -= 1;
+            m += 12;
+        }
+        return 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) + Math.floor(306 * (m + 1) / 10) + this.d - 428;
+    }
+    _valid(y, m, d){
+        return 1 <= d && d <= this._last_day(y, m);
+    }
+    _last_day(y, m){
+        if([1, 3, 5, 7, 8, 10, 12].includes(m))return 31;
+        if(m == 2){
+            if((y % 4 == 0 && y % 100 != 0) || y % 400 == 0)return 29;
+            return 28
+        }
+        return 30;
+    }
+}
+
+function get_last_day(y, m){
+    if([1, 3, 5, 7, 8, 10, 12].includes(m))return 31;
+    if(m == 2){
+        if((y % 4 == 0 && y % 100 != 0) || y % 400 == 0)return 29;
+        return 28
+    }
+    return 30;
+}
+
+function appendJournal(parent_elem, date){
+    let a_elem = document.createElement('a');
+    const mm = String(date.m).padStart(2, '0');
+    const dd = String(date.d).padStart(2, '0');
+    const yy = String(date.y % 100).padStart(2, '0');
+    a_elem.href = `data/${date.y}-${mm}-${dd}.md`;
+    a_elem.textContent = `Amano Nagare 日誌エントリ${yy}${mm}${dd}`;
+    a_elem.className = "block text-[#1a2075] hover:underline hover:text-[#ded103] font-bold";
+    console.log(a_elem);
+    parent_elem.appendChild(a_elem);
+}
+
+function sortJournalLinks(parent_elem){
+    const items = Array.from(parent_elem.children);
+    items.sort((a, b) => b.href.localeCompare(a.href));
+    items.forEach(item => parent_elem.appendChild(item));
+}
+
+function today(){
+    let d = new Date();
+    return new SimpleDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+
+async function append_and_fetch_journal(parent_elem, date){
+    const mm = String(date.m).padStart(2, '0');
+    const dd = String(date.d).padStart(2, '0');
+    const yy = String(date.y % 100).padStart(2, '0');
+    const url = `data/${date.y}-${mm}-${dd}.md`;
+    let res = await fetch(url);
+    if(res.ok){
+        let a_elem = document.createElement('a');
+        a_elem.href = url;
+        a_elem.textContent = `Amano Nagare 日誌エントリ${yy}${mm}${dd}`;
+        a_elem.className = "block text-[#1a2075] hover:underline hover:text-[#ded103] font-bold";
+        parent_elem.appendChild(a_elem);
+    }
+}
+
+async function main(){  
+    let d = new SimpleDate(2026, 9, 1);
+    let t = today();
+    let promise_vec = [];
+    let n = t.to_int() - d.to_int();
+    for(let i=0;i<=n;i++){
+        promise_vec.push(append_and_fetch_journal(journal_list_elem, d.clone()));
+        d.next();
+        console.log(d);
+    }
+    await Promise.all(promise_vec);
+    sortJournalLinks(journal_list_elem);
+}
+
+main();
+</file>
+
+<file path="index.html">
 <!DOCTYPE html>
 <html lang="ja">
     <head>
@@ -167,3 +1353,32 @@
         </main>
     </body>
 </html>
+</file>
+
+<file path="journal/data/2026-09-12.md">
+### 06:17
+おはようございます、私が朝食のトーストです？私は出発する
+
+### 07:01
+私はただ今電車に乗っています！、なので、私は今日は何をする予定かを見越しましょう！？
+
+私は大学に着いたら、なるべく早く、私はまっすぐにN308に到着する必要があります。私はそこで様々なことをやります。その後、私はS302に9:30で向かう必要があります。私は集合に参加する。私は11:30まで何も予定がありませんが、その後は私はスタッフメンバーとして通告する必要があります。 それは12:15まで続きます！？それが終わり次第、13:00までにランチを取る必要があります。私はN308を確認する。それは14:30ぬ終わるべきです。おそらくは、私はその後何も予定はないでしょう。これはもっともスケジュールにとって楽観的な視界です。なので、他のタスクが急遽入ることは可能性として低くないでしょう！
+
+二日目ですが、私は似たように大学へ到着次第、頭入りでN308に到着します、そしてS302へ向かいます。少しの自由を獲得したのちに、11:30にスタッフメンバーとして参画することになるでしょう。12:15にそれを達成後、13:00までに昼食を食べ、N308に向かいます。それは14:30に終わります。二日目に関しては、それが終わり次第、またスタッフメンバーとして登録される可能性があります？
+
+この状況から鑑みるに、私の獲得する自由な時間帯は9:30から11:30そして14:30から18:00でしょう、 そしてそれはいつも前半に集中しているように見えます！？
+
+### 18:53
+はい、ただいま終わりました。かなり情報量のある一日で、この前のメッセージがかなり長く前に感じますが！？！私は帰宅しているところであります、本当ならばこまめに記録したほうがいいのですが、あまりスマートフォンを触れる雰囲気の時間がないので、なかなか難しいですね...。
+とりあえず、1dnK#9のほうはかなりぎりぎりでした、というか準備時間超過ですね。最初の準備も間に合わず、私は途中でS302に行ったので結局どうなったのかは分からないですが、一応行った形跡があったので良かったと思います？
+中盤にトークセッションを挟むのですが、の前半は、私ではないですが、「緊張しているのはわかるけどさ」とお客さんに言わせてしまうほど前半の担当の人たちがぐだついていたので、私はそこから知見を活かしてある程度の流れを考案して司会役と流れを合わせました、そしたら無事上手く行ったっぽいです。
+後半は私の班がトークセッション中に準備していたのがうまくいかなかったっぽいらしく、非常にやりにくいシステムで周りが少なかったです。多分全体的にとてもUXの悪いアクティビティになってしまったのではないですかね？
+
+一方、S302のほうは比較的上手くいってるなと感じました。前半私が来たときは人が異常に少なかったですが、全体的にそれは人が少ないので、後半がどれほど集まったかはわかりませんが、少なくともスムーズに企画が進行していたように感じました。非常に面白い対比ですね！
+
+個人的には、意外な発見がありましたね、私は炎上しかけているプロジェクトが割と好きなのかもしれません！多くの人はN308とS302のどちらに協力したいかと言われたら、やることが明確で拘束時間の少ないS302ですが、N308のほうが私は不思議とやりがいを感じましたね〜、誰もが各々個人判断をして全体最適を目指そうとした私たちの連帯感がとても心地よかったです、何でしょうね、うまく言えないのですが私は私の知らない私を知ってしまったのかもしれません！
+
+今日は帰宅したらABCがあります、それに参加してもいいかもしれませんし、しなくてもいいかもしれません。今日くらいはUnratedにしてみようと思います。たまにはRatedにしなくてもいいですよね？
+</file>
+
+</files>
