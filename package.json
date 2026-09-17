@@ -1,0 +1,25 @@
+{
+  "name": "page",
+  "version": "1.0.0",
+  "main": "index.js",
+"scripts": {
+  "build:css": "tailwindcss -i ./styles.css -o ./aggregated.css",
+  "build:ts": "tsc",
+  "build": "npm run build:css && npm run build:ts",
+  "watch:css": "tailwindcss -i ./styles.css -o ./aggregated.css --watch",
+  "watch:ts": "tsc --watch"
+},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.3.3"
+  }
+}
