@@ -58,79 +58,10 @@ class SimpleDate{
     }
 }
 
-function get_last_day(y: number, m: number): number{
-    if([1, 3, 5, 7, 8, 10, 12].includes(m))return 31;
-    if(m == 2){
-        if((y % 4 == 0 && y % 100 != 0) || y % 400 == 0)return 29;
-        return 28
-    }
-    return 30;
-}
-
-function appendJournal(parent_elem: HTMLElement, date: SimpleDate){
-    let a_elem = document.createElement('a');
-    const mm = String(date.m).padStart(2, '0');
-    const dd = String(date.d).padStart(2, '0');
-    const yy = String(date.y % 100).padStart(2, '0');
-    a_elem.href = `data/${date.y}-${mm}-${dd}.md`;
-    a_elem.textContent = `Amano Nagare 日誌エントリ${yy}${mm}${dd}`;
-    a_elem.className = "block text-[#1a2075] hover:underline hover:text-[#ded103] font-bold";
-    console.log(a_elem);
-    parent_elem.appendChild(a_elem);
-}
-
-function sortJournalLinks(parent_elem: HTMLElement){
-    const items = Array.from(parent_elem.querySelectorAll<HTMLAnchorElement>(":scope > a"));
-    items.sort((a, b) => b.href.localeCompare(a.href));
-    items.forEach(item => parent_elem.appendChild(item));
-}
-
 function today(): SimpleDate{
     let d = new Date();
     return new SimpleDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
 }
-
-async function append_and_fetch_journal(parent_elem: HTMLElement, date: SimpleDate){
-    const mm = String(date.m).padStart(2, '0');
-    const dd = String(date.d).padStart(2, '0');
-    const yy = String(date.y % 100).padStart(2, '0');
-    const url = `data/${date.y}-${mm}-${dd}.md`;
-    let res = await fetch(url);
-    if(res.ok){
-        let a_elem = document.createElement('a');
-        a_elem.href = url;
-        a_elem.textContent = `Amano Nagare 日誌エントリ${yy}${mm}${dd}`;
-        a_elem.className = "block text-[#1a2075] hover:underline hover:text-[#ded103] font-bold";
-        parent_elem.appendChild(a_elem);
-    }
-}
-
-async function get_journal_to_string(date: SimpleDate): Promise<string | null>{
-    const mm = String(date.m).padStart(2, '0');
-    const dd = String(date.d).padStart(2, '0');
-    const url = `data/${date.y}-${mm}-${dd}.md`;
-    let res = await fetch(url);
-    return res.ok ? await res.text() : null;
-}
-
-/*
-とりあえず非同期でやりたいこと
-    Raineeオブジェクトとして読み取る
-    Raineeオブジェクトを子要素にする
-    Raineeオブジェクト配列にプッシュ
-    終わったらRaineeオブジェクトをソートする
-    forでRaineeオブジェクトを親要素にappendする
-
-Raineeオブジェクトのメンバ変数
-    public date: SimpleDate
-    private content: string | null
-Raineeオブジェクトのメンバ関数
-    public constructor(date: SimpleDate)
-    public fetch(): Promise<void>
-    public append_to(parent_elem: HTMLElement): void
-    private get_html(): string
-    private get_title(): string
-*/
 
 class Rainee{
     public date: SimpleDate;
@@ -140,20 +71,24 @@ class Rainee{
         this.content = null;
     }
     public async fetch(): Promise<void>{
-        this.content = await get_journal_to_string(this.date);
+        this.content = await this.get_journal_to_string();
     }
-    public append_to(parent_elem: HTMLElement): void{
+    public append_to(parent_elem: HTMLElement){
         if(this.content === null)return;
 
         const parsed_elem = document.createElement('div');
         parsed_elem.innerHTML = this.get_html();
         const card_elem = this.create_card();
-        for(const entry_elem of this.group_entries(parsed_elem.children)){
-            card_elem.appendChild(entry_elem);
-        }
+        for(const entry_elem of this.group_entries(parsed_elem.children))card_elem.appendChild(entry_elem);
         parent_elem.appendChild(card_elem);
     }
-
+    private async get_journal_to_string(): Promise<string | null>{
+        const mm = String(this.date.m).padStart(2, '0');
+        const dd = String(this.date.d).padStart(2, '0');
+        const url = `data/${this.date.y}-${mm}-${dd}.md`;
+        let res = await fetch(url);
+        return res.ok ? await res.text() : null;
+    }
     // 日付タイトルを含む日誌カードのアウトラインつくりましょ
     private create_card(): HTMLDivElement{
         const card_elem = document.createElement('div');
@@ -215,9 +150,7 @@ async function main(){
     }
     await Promise.all(promise_vec);
     rainee_vec.sort((a, b) => b.date.to_int() - a.date.to_int());
-    for(const rainee of rainee_vec){
-        rainee.append_to(journal_list_elem);
-    }
+    for(const rainee of rainee_vec)rainee.append_to(journal_list_elem);
 }
 
 main();
